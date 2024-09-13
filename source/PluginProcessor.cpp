@@ -134,8 +134,11 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     {
         for (int channel = 0; channel < totalNumOutputChannels; ++channel)
         {
-            delay.push (channel, channelData[channel][sample]);
-            channelData[channel][sample] = delay.pop (channel, 500.0f);
+            float outputSample = delay.pop (channel, 500.0f);
+            float feedbackSample = channelData[channel][sample] + outputSample * 0.5f;
+
+            delay.push (channel, feedbackSample);
+            channelData[channel][sample] = outputSample;
         }
     }
 }
