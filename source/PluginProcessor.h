@@ -6,6 +6,8 @@
 #include "ipps.h"
 #endif
 
+#include "Delay.h"
+
 class PluginProcessor : public juce::AudioProcessor
 {
 public:
@@ -39,5 +41,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+    Delay delayLeft, delayRight;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
