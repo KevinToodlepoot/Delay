@@ -90,8 +90,7 @@ void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // initialisation that you need..
     juce::ignoreUnused (sampleRate, samplesPerBlock);
 
-    delayLeft.prepare (sampleRate, 5000.0f);
-    delayRight.prepare (sampleRate, 5000.0f);
+    delay.prepare (sampleRate, getTotalNumOutputChannels(), 5000.0f);
 }
 
 void PluginProcessor::releaseResources()
@@ -112,12 +111,6 @@ bool PluginProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
         && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
-        // This checks if the input layout matches the output layout
-    #if !JucePlugin_IsSynth
-    if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
-        return false;
-    #endif
-
     return true;
 #endif
 }
@@ -133,23 +126,17 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     int numSamples = buffer.getNumSamples();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+        buffer.copyFrom (i, 0, buffer.getReadPointer (0), numSamples);
 
     auto channelData = buffer.getArrayOfWritePointers();
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        delayLeft.push (channelData[0][sample]);
-        channelData[0][sample] = delayLeft.pop (1000.0f);
-
-        delayRight.push (channelData[1][sample]);
-        channelData[1][sample] = delayRight.pop (1000.0f);
+        for (int channel = 0; channel < totalNumOutputChannels; ++channel)
+        {
+            delay.push (channel, channelData[channel][sample]);
+            channelData[channel][sample] = delay.pop (channel, 500.0f);
+        }
     }
 }
 
